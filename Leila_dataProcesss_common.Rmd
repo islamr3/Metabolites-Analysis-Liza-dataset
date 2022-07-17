@@ -1,0 +1,155 @@
+---
+title: "Leila project"
+author: "Rabiul Islam<br><small>Center for Renal Precision Medicine<br>University of Texas Health San Antonio School of Medicine</small>"
+date: "<small>`r Sys.Date()`</small>"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    number_sections: true
+    toc_float: 
+      collapsed: false
+    code_folding: hide
+    theme: cerulean
+---
+
+![Center for Renal Precision Medicine](https://dmontemayor.github.io/assets/Long_SOM/horizontal/JPG/UTHSA_Long-SOM_H_CMYK.jpg)
+
+# Brief
++Rabi needs only to copy the formula in the Metaspace and record the FDR for both adducts of H and Cl.
+ 
+```{r requirements, message=FALSE, warning=FALSE}
+#Requirements
+requirements <- c("adapr","survival","survminer","dplyr","CBPS","purrr","gtsummary","gt","cobalt","officer","rvg","lme4","lmerTest","effects","emmeans","readxl","tidyr")
+
+#CRAN repository
+repos <- "http://cran.us.r-project.org"
+
+#install and load missing requirements
+for (pack in requirements){
+  if( !is.element(pack, .packages(all.available = TRUE)) ) {
+    #install.packages(pack, repos = repos)
+    install.packages(pack)
+  }
+  library(pack, character.only = TRUE)
+}
+```
+
+
+```{r constants}
+#Constants
+rm(list=ls())
+set.seed( 2011 )
+MWade = 135.13 # molecular weights for adenine in g/mol
+MWcre = 113.12 #molecular weights for creatinine in g/mol
+
+```
+
+# Load data in here
+```{r redcapdata}
+setwd("/Users/rabiul/Desktop/Project/Leila project")
+rawdata1 <- read.csv("ZIPCHIP.csv")
+
+#Metaspace Dataset
+rawdata2 <- read.csv("Test_S1_16p_20220518.csv")
+rawdata3 <- read.csv("Test_S2_24p_20220518.csv")
+rawdata4 <- read.csv("Test_S3_32p_20220518.csv")
+Temp<-as.matrix(rawdata1$formula.m.z)
+```
+
+#Find common metabolies
+```{r}
+formulaData<-c()
+for (i in 1:dim(Temp)[1]){
+  R<-unlist(strsplit(Temp[i], ","))[1]
+  formulaData[i]<-R
+}
+data_common1 <- as.matrix(generics::intersect(formulaData, rawdata2$formula))
+data_common2 <- as.matrix(generics::intersect(data_common1, rawdata3$formula))
+data_common3 <- as.matrix(generics::intersect(data_common2, rawdata4$formula))
+```
+
+```{r}
+#make a dataframe to hold results for each year and group
+db1<-data.frame(matrix(nrow=50, ncol = 3))
+colnames(db1)<-c("Organic.acid.method.metabolites","formula.m.z","HMDB.ID")
+#Loop over 
+j=1;
+for (i in 1:dim(data_common3)[1]){
+  index<-which(formulaData==data_common3[i])
+  if (length(index) ==1){
+    db1[j,"Organic.acid.method.metabolites"]<-rawdata1["Organic.acid.method.metabolites"][index,]
+    db1[j,"formula.m.z"]<-rawdata1["formula.m.z"][index,]
+    db1[j,"HMDB.ID"]<-rawdata1["HMDB.ID"][index,]
+    j<-j+1
+  } else{
+    db1[j,"Organic.acid.method.metabolites"]<-rawdata1["Organic.acid.method.metabolites"][index[1],]
+    db1[j,"formula.m.z"]<-rawdata1["formula.m.z"][index[1],]
+    db1[j,"HMDB.ID"]<-rawdata1["HMDB.ID"][index[1],]
+    j<-j+1
+    db1[j,"Organic.acid.method.metabolites"]<-rawdata1["Organic.acid.method.metabolites"][index[2],]
+    db1[j,"formula.m.z"]<-rawdata1["formula.m.z"][index[2],]   
+    db1[j,"HMDB.ID"]<-rawdata1["HMDB.ID"][index[2],]
+    j<-j+1
+  }
+  
+}
+```
+
+```{r}
+Temp<-as.matrix(rawdata1$formula.m.z.1)
+```
+
+#Find common metabolies
+```{r}
+formulaData<-c()
+for (i in 1:dim(Temp)[1]){
+  R<-unlist(strsplit(Temp[i], ","))[1]
+  formulaData[i]<-R
+}
+data_common1 <- as.matrix(generics::intersect(formulaData, rawdata2$formula))
+data_common2 <- as.matrix(generics::intersect(data_common1, rawdata3$formula))
+data_common3 <- as.matrix(generics::intersect(data_common2, rawdata4$formula))
+```
+
+```{r}
+#make a dataframe to hold results for each year and group
+db2<-data.frame(matrix(nrow=50, ncol = 3))
+colnames(db2)<-c("Amino.acids.method.metabolite","formula.m.z.1","HMDB.ID.1")
+#Loop over 
+j=1;
+for (i in 1:dim(data_common3)[1]){
+  index<-which(formulaData==data_common3[i])
+  if (length(index) ==1){
+    db2[j,"Amino.acids.method.metabolite"]<-rawdata1["Amino.acids.method.metabolite"][index,]
+    db2[j,"formula.m.z.1"]<-rawdata1["formula.m.z.1"][index,]
+    db2[j,"HMDB.ID.1"]<-rawdata1["HMDB.ID.1"][index,]
+    j<-j+1
+  } else{
+    db2[j,"Amino.acids.method.metabolite"]<-rawdata1["Amino.acids.method.metabolite"][index[1],]
+    db2[j,"formula.m.z.1"]<-rawdata1["formula.m.z.1"][index[1],]
+    db2[j,"HMDB.ID.1"]<-rawdata1["HMDB.ID.1"][index[1],]
+    j<-j+1
+    db2[j,"Amino.acids.method.metabolite"]<-rawdata1["Amino.acids.method.metabolite"][index[2],]
+    db2[j,"formula.m.z.1"]<-rawdata1["formula.m.z.1"][index[2],]   
+    db2[j,"HMDB.ID.1"]<-rawdata1["HMDB.ID.1"][index[2],]
+    j<-j+1
+  }
+  
+}
+```
+
+
+```{r}
+dataComon<-cbind(db1,db2)
+#Save into CSV file
+write.csv(dataComon,"/Users/rabiul/Desktop/Project/Leila project/commonMetabolies.csv")
+```
+
+```{r}
+#Rename column names
+names(newData)<-c("Organic acid method metabolites","formula,m/z","HMDB ID","m/z of M-H","FDR of Identification (M-H)","m/z of M+Cl","FDR of Identification (M+Cl)","Amino acids method metabolite","formula,m/z1","HMDB ID1","m/z of M-H1","FDR of Identification (M-H)","m/z of M+Cl","FDR of Identification (M+Cl)1")
+#Save into CSV file
+write.csv(newData,"/Users/rabiul/Desktop/Project/Leila project/ZIPCHIPdata_new_1.csv")
+```
+
